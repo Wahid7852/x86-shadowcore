@@ -1,0 +1,7 @@
+cachyos-*.tar.gz
+cachyos-*.tar.gz.asc
+cachyos-*/
+*.ko
+*.o
+*.img
+build.log
