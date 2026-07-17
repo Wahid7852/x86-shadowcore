@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installs a built ShadowCoreX kernel: modules, vmlinuz, initramfs preset, GRUB.
+# Installs a built ShadowCore kernel: modules, vmlinuz, initramfs preset, GRUB.
 # This kernel is NOT pacman-tracked - this script does what the package hooks
 # would normally do. Run as root from within the built kernel source tree
 # (the directory build.sh built in), e.g.:
@@ -19,22 +19,32 @@ fi
 KVER="$(make -s kernelrelease)"
 echo "Installing kernel release: $KVER"
 
+# This build reuses the 'ShadowCore' name, which may already be a
+# pacman-tracked package from an earlier cachyos-kernel-manager build. Remove
+# it first so pacman's file database doesn't go stale (it would otherwise
+# still think it owns /boot/vmlinuz-ShadowCore etc. while we silently
+# overwrite them, risking a future pacman -Syu clobbering this build).
+if pacman -Qi ShadowCore &>/dev/null; then
+  echo "Removing pacman-tracked ShadowCore package (being replaced by this manual build)..."
+  pacman -R --noconfirm ShadowCore ShadowCore-headers 2>&1 || pacman -R --noconfirm ShadowCore
+fi
+
 make modules_install
-cp -v arch/x86/boot/bzImage "/boot/vmlinuz-ShadowCoreX"
+cp -v arch/x86/boot/bzImage "/boot/vmlinuz-ShadowCore"
 
-cat > /etc/mkinitcpio.d/ShadowCoreX.preset <<EOF
-# mkinitcpio preset file for the manually-built 'ShadowCoreX' kernel
+cat > /etc/mkinitcpio.d/ShadowCore.preset <<EOF
+# mkinitcpio preset file for the manually-built 'ShadowCore' kernel
 
-ALL_kver="/boot/vmlinuz-ShadowCoreX"
+ALL_kver="/boot/vmlinuz-ShadowCore"
 
 PRESETS=('default')
 
-default_image="/boot/initramfs-ShadowCoreX.img"
+default_image="/boot/initramfs-ShadowCore.img"
 EOF
 
-mkinitcpio -p ShadowCoreX
+mkinitcpio -p ShadowCore
 grub-mkconfig -o /boot/grub/grub.cfg
 
 echo
-echo "Done. ShadowCoreX should now be a GRUB boot entry."
-echo "Existing kernels (ShadowCore, linux-cachyos-bore-lto, linux-lts, linux) are untouched."
+echo "Done. ShadowCore should now be a GRUB boot entry (rebuilt, no longer pacman-tracked)."
+echo "Existing kernels (linux-cachyos-bore-lto, linux-lts, linux) are untouched, still there as fallback."

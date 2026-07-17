@@ -45,8 +45,11 @@ builds with `ccache` wired in (`CC="ccache clang"`).
 ```
 
 Run from the built source tree. Installs modules, copies the kernel image to
-`/boot/vmlinuz-ShadowCoreX`, writes an mkinitcpio preset, regenerates initramfs
-and GRUB config. Additive - does not touch any other installed kernel.
+`/boot/vmlinuz-ShadowCore`, writes an mkinitcpio preset, regenerates initramfs
+and GRUB config. If a pacman-tracked `ShadowCore` package already exists (e.g.
+from an earlier cachyos-kernel-manager build), it's removed first so pacman's
+file database doesn't go stale underneath this build. Other installed kernels
+(`linux-cachyos-bore-lto`, `linux-lts`, `linux`) are untouched either way.
 
 ## Why `configure.sh` exists as a separate script
 

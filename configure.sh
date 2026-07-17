@@ -26,9 +26,7 @@ fi
 # Full LTO instead of thin - accept the longer build for better codegen.
 ./scripts/config -d LTO_CLANG_THIN -e LTO_CLANG_FULL
 
-# Distinct localversion so this never collides with a pacman-installed
-# ShadowCore package.
-./scripts/config --set-str LOCALVERSION "-ShadowCoreX" -d LOCALVERSION_AUTO
+./scripts/config --set-str LOCALVERSION "-ShadowCore" -d LOCALVERSION_AUTO
 
 echo "Resolving dependent options via olddefconfig..."
 make LLVM=1 LLVM_IAS=1 CC="ccache clang" olddefconfig
