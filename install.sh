@@ -43,6 +43,14 @@ default_image="/boot/initramfs-ShadowCore.img"
 EOF
 
 mkinitcpio -p ShadowCore
+
+# Make ShadowCore the actual GRUB default, not just a reachable menu entry.
+# GRUB_TOP_LEVEL is CachyOS's grub-mkconfig hook for which kernel lands at
+# menu position 0 (GRUB_DEFAULT=0). Without this, ShadowCore only boots when
+# manually selected - a plain reboot silently falls back to whatever kernel
+# was previously default.
+sed -i "s|^GRUB_TOP_LEVEL=.*|GRUB_TOP_LEVEL='/boot/vmlinuz-ShadowCore'|" /etc/default/grub
+
 grub-mkconfig -o /boot/grub/grub.cfg
 
 echo
