@@ -45,9 +45,20 @@ fi
 
 ./scripts/config --set-str LOCALVERSION "-ShadowCore" -d LOCALVERSION_AUTO
 
+# If you've just run localmodconfig against a live lsmod snapshot, it only
+# keeps what happened to be loaded at that exact moment. Force these back on
+# regardless: OVERLAY_FS is what docker's actual storage driver needs to
+# start a container at all - missing it doesn't show up until you try to run
+# something. Rest of this list is the same reasoning: things this machine's
+# workload plausibly needs even when nothing was actively using them when
+# the snapshot was taken.
+./scripts/config -m OVERLAY_FS -m EXFAT_FS -m NTFS3_FS -m USB_STORAGE \
+  -m USB_SERIAL_CH341 -m USB_SERIAL_CP210X -m USB_SERIAL_FTDI_SIO \
+  -m VIRTIO_NET -m VHOST_NET -m BRIDGE -m VETH -m BT_HIDP
+
 echo "Resolving dependent options via olddefconfig..."
 make LLVM=1 LLVM_IAS=1 CC="ccache clang" olddefconfig
 
 echo
 echo "--- verifying ---"
-grep -E "^CONFIG_(X86_NATIVE_CPU|GENERIC_CPU\b|LTO_CLANG_FULL|LTO_CLANG_THIN|LOCALVERSION|SCHED_BORE|HZ=|TRANSPARENT_HUGEPAGE_ALWAYS|TCP_CONG_BBR3|KVM_INTEL=|CC_OPTIMIZE_FOR_PERFORMANCE_O3|NO_HZ_IDLE|NO_HZ_FULL|CPU_FREQ_DEFAULT_GOV_PERFORMANCE)" .config || true
+grep -E "^CONFIG_(X86_NATIVE_CPU|GENERIC_CPU\b|LTO_CLANG_FULL|LTO_CLANG_THIN|LOCALVERSION|SCHED_BORE|HZ=|TRANSPARENT_HUGEPAGE_ALWAYS|TCP_CONG_BBR3|KVM_INTEL=|CC_OPTIMIZE_FOR_PERFORMANCE_O3|NO_HZ_IDLE|NO_HZ_FULL|CPU_FREQ_DEFAULT_GOV_PERFORMANCE|OVERLAY_FS)" .config || true
