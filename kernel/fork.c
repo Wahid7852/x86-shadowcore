@@ -126,6 +126,12 @@
 
 #include <kunit/visibility.h>
 
+#ifdef CONFIG_USER_NS
+static int unprivileged_userns_clone = 1;
+#else
+#define unprivileged_userns_clone 1
+#endif
+
 /*
  * Minimum number of threads to boot the kernel
  */
@@ -535,6 +541,7 @@ void free_task(struct task_struct *tsk)
 #endif
 	release_user_cpus_ptr(tsk);
 	scs_release(tsk);
+	smp_task_ipi_mask_free(tsk);
 
 #ifndef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -932,9 +939,13 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 #endif
 	account_kernel_stack(tsk, 1);
 
-	err = scs_prepare(tsk, node);
+	err = smp_task_ipi_mask_alloc(tsk);
 	if (err)
 		goto free_stack;
+
+	err = scs_prepare(tsk, node);
+	if (err)
+		goto free_ipi_mask;
 
 #ifdef CONFIG_SECCOMP
 	/*
@@ -1011,6 +1022,8 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 #endif
 	return tsk;
 
+free_ipi_mask:
+	smp_task_ipi_mask_free(tsk);
 free_stack:
 	exit_task_stack_account(tsk);
 	free_thread_stack(tsk);
@@ -2070,6 +2083,11 @@ __latent_entropy struct task_struct *copy_process(
 		 */
 		if (!(clone_flags & CLONE_NNP) &&
 		    !ns_capable(current_user_ns(), CAP_SYS_ADMIN))
+			return ERR_PTR(-EPERM);
+	}
+
+	if ((clone_flags & CLONE_NEWUSER) && !unprivileged_userns_clone) {
+		if (!capable(CAP_SYS_ADMIN))
 			return ERR_PTR(-EPERM);
 	}
 
@@ -3138,6 +3156,10 @@ static int check_unshare_flags(unsigned long unshare_flags)
 		if (!current_is_single_threaded())
 			return -EINVAL;
 	}
+	if ((unshare_flags & CLONE_NEWUSER) && !unprivileged_userns_clone) {
+		if (!capable(CAP_SYS_ADMIN))
+			return -EPERM;
+	}
 
 	return 0;
 }
@@ -3373,6 +3395,15 @@ static const struct ctl_table fork_sysctl_table[] = {
 		.mode		= 0644,
 		.proc_handler	= sysctl_max_threads,
 	},
+#ifdef CONFIG_USER_NS
+	{
+		.procname	= "unprivileged_userns_clone",
+		.data		= &unprivileged_userns_clone,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec,
+	},
+#endif
 };
 
 static int __init init_fork_sysctl(void)

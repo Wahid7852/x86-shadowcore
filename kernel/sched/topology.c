@@ -1723,8 +1723,18 @@ sd_init(struct sched_domain_topology_level *tl,
 	/*
 	 * Convert topological properties into behaviour.
 	 */
-	/* Don't attempt to spread across CPUs of different capacities. */
-	if ((sd->flags & SD_ASYM_CPUCAPACITY) && sd->child)
+	/*
+	 * Don't attempt to spread across CPUs of different capacities.
+	 *
+	 * If the domain has clusters of CPUs sharing L2 cache, keep the flag to
+	 * spread tasks across clusters of identical capacity. Checks in
+	 * update_sd_pick_busiest() prevent task migrations from high- to low-
+	 * capacity CPUs for non-overloaded groups. Migrations to a lower-
+	 * capacity CPU can happen if a higher-capacity group is overloaded and
+	 * a low-capacity cluster has spare capacity.
+	 */
+	if ((sd->flags & SD_ASYM_CPUCAPACITY) && sd->child &&
+	    !(sd->child->flags & SD_CLUSTER))
 		sd->child->flags &= ~SD_PREFER_SIBLING;
 
 	if (sd->flags & SD_SHARE_CPUCAPACITY) {
@@ -2722,6 +2732,9 @@ build_sched_domains(const struct cpumask *cpu_map, struct sched_domain_attr *att
 			sd->shared = *per_cpu_ptr(d.sds, sd_id);
 			atomic_set(&sd->shared->nr_busy_cpus, sd->span_weight);
 			atomic_inc(&sd->shared->ref);
+#ifdef CONFIG_SCHED_POC_SELECTOR
+			poc_sd_shared_init(sd, sd_id);
+#endif
 
 			/*
 			 * In presence of higher domains, adjust the
