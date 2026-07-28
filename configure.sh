@@ -23,8 +23,9 @@ fi
 # tune for this exact machine's silicon, not a portable baseline).
 ./scripts/config -d GENERIC_CPU -e X86_NATIVE_CPU
 
-# Full LTO instead of thin - accept the longer build for better codegen.
-./scripts/config -d LTO_CLANG_THIN -e LTO_CLANG_FULL
+# Thin LTO, not full - full LTO's final link needs more RAM than this
+# 16GB machine has (watched it climb to ~15GB used and get killed).
+./scripts/config -d LTO_CLANG_FULL -e LTO_CLANG_THIN
 
 # -O3 instead of the default -O2.
 ./scripts/config -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
